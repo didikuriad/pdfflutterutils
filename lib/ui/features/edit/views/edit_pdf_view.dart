@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:pdfutils/domain/models/pdf_edit_overlay.dart';
@@ -275,6 +276,75 @@ class EditPdfView extends StatelessWidget {
   }
 }
 
+class _DesktopHorizontalScrollView extends StatefulWidget {
+  const _DesktopHorizontalScrollView({
+    required this.child,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  State<_DesktopHorizontalScrollView> createState() =>
+      _DesktopHorizontalScrollViewState();
+}
+
+class _DesktopHorizontalScrollViewState
+    extends State<_DesktopHorizontalScrollView> {
+  late final ScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent && _controller.hasClients) {
+          final delta = event.scrollDelta.dy != 0
+              ? event.scrollDelta.dy
+              : event.scrollDelta.dx;
+          if (delta != 0) {
+            final target = (_controller.offset + delta)
+                .clamp(0.0, _controller.position.maxScrollExtent);
+            _controller.jumpTo(target);
+          }
+        }
+      },
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+            PointerDeviceKind.stylus,
+          },
+        ),
+        child: Scrollbar(
+          controller: _controller,
+          thumbVisibility: false,
+          child: SingleChildScrollView(
+            controller: _controller,
+            scrollDirection: Axis.horizontal,
+            padding: widget.padding,
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _EditToolbar extends StatelessWidget {
   const _EditToolbar({
     required this.viewModel,
@@ -308,10 +378,10 @@ class _EditToolbar extends StatelessWidget {
           bottom: BorderSide(color: colorScheme.outlineVariant),
         ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: _DesktopHorizontalScrollView(
+        padding: const EdgeInsets.only(left: 12, right: 20, top: 6, bottom: 6),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             for (final tool in PdfEditTool.values) ...[
               ChoiceChip(
@@ -319,6 +389,7 @@ class _EditToolbar extends StatelessWidget {
                 label: Text(tool.label),
                 selected: viewModel.activeTool == tool,
                 visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 onSelected: disabled ? null : (_) => viewModel.selectTool(tool),
               ),
               const SizedBox(width: 6),
@@ -331,6 +402,7 @@ class _EditToolbar extends StatelessWidget {
               avatar: const Icon(Icons.draw_rounded, size: 16),
               label: const Text('Tanda Tangan'),
               visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onPressed: disabled ? null : onOpenSignaturePad,
             ),
             const SizedBox(width: 6),
@@ -338,6 +410,7 @@ class _EditToolbar extends StatelessWidget {
               avatar: const Icon(Icons.add_photo_alternate_outlined, size: 16),
               label: const Text('Gambar'),
               visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onPressed: disabled ? null : viewModel.pickAndInsertImage,
             ),
             const SizedBox(
@@ -360,7 +433,7 @@ class _EditToolbar extends StatelessWidget {
               onPressed: !disabled && viewModel.selectedOverlay != null
                   ? viewModel.deleteSelectedOverlay
                   : null,
-              tooltip: 'Hapus anotasi terpilih',
+              tooltip: 'Hapus anotasi terpilih (Delete)',
               visualDensity: VisualDensity.compact,
               icon: Icon(
                 Icons.delete_outline_rounded,
@@ -370,15 +443,19 @@ class _EditToolbar extends StatelessWidget {
                     : null,
               ),
             ),
-            TextButton.icon(
+            IconButton(
               onPressed: !disabled && viewModel.currentPageOverlays.isNotEmpty
                   ? viewModel.clearCurrentPageOverlays
                   : null,
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
+              tooltip: 'Bersihkan anotasi di halaman ini',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                Icons.layers_clear_outlined,
+                size: 20,
+                color: !disabled && viewModel.currentPageOverlays.isNotEmpty
+                    ? colorScheme.error
+                    : null,
               ),
-              icon: const Icon(Icons.layers_clear_outlined, size: 18),
-              label: const Text('Bersihkan Hal'),
             ),
           ],
         ),
@@ -461,9 +538,8 @@ class _EditPropertiesBar extends StatelessWidget {
           bottom: BorderSide(color: colorScheme.outlineVariant),
         ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: _DesktopHorizontalScrollView(
+        padding: const EdgeInsets.only(left: 12, right: 20, top: 6, bottom: 6),
         child: Row(
           children: [
             if (palette.isNotEmpty) ...[
