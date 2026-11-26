@@ -58,6 +58,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
+  bool _isSidebarVisible = true;
 
   static const List<({String label, IconData icon, IconData selectedIcon})>
       _destinations = [
@@ -137,24 +138,92 @@ class _AppShellState extends State<AppShell> {
             );
 
             if (isWide || isCompactRail) {
+              final colorScheme = Theme.of(context).colorScheme;
               return Scaffold(
                 body: Row(
                   children: [
-                    _DesktopRail(
-                      selectedIndex: _selectedIndex,
-                      extended: isWide,
-                      isDarkMode: widget.isDarkMode,
-                      isCompactMode: wc.isCompactMode,
-                      autoHideSecondsRemaining: countdownSeconds,
-                      onDestinationSelected: (index) {
-                        setState(() => _selectedIndex = index);
-                      },
-                      onToggleWindowMode: wc.toggleWindowMode,
-                      onToggleAutoHide: wc.toggleAutoHideCountdown,
-                      onToggleTheme: widget.onToggleTheme,
+                    if (_isSidebarVisible) ...[
+                      _DesktopRail(
+                        selectedIndex: _selectedIndex,
+                        extended: isWide,
+                        isDarkMode: widget.isDarkMode,
+                        isCompactMode: wc.isCompactMode,
+                        autoHideSecondsRemaining: countdownSeconds,
+                        onDestinationSelected: (index) {
+                          setState(() => _selectedIndex = index);
+                        },
+                        onToggleSidebar: () {
+                          setState(() => _isSidebarVisible = false);
+                        },
+                        onToggleWindowMode: wc.toggleWindowMode,
+                        onToggleAutoHide: wc.toggleAutoHideCountdown,
+                        onToggleTheme: widget.onToggleTheme,
+                      ),
+                      const VerticalDivider(width: 1),
+                    ],
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          workspaceBody,
+                          if (!_isSidebarVisible)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: Center(
+                                child: Tooltip(
+                                  message: 'Tampilkan Sidebar',
+                                  child: Material(
+                                    color: colorScheme.surfaceContainerHigh
+                                        .withValues(alpha: 0.95),
+                                    elevation: 2,
+                                    borderRadius: const BorderRadius.horizontal(
+                                      right: Radius.circular(12),
+                                    ),
+                                    child: InkWell(
+                                      borderRadius:
+                                          const BorderRadius.horizontal(
+                                        right: Radius.circular(12),
+                                      ),
+                                      onTap: () {
+                                        setState(() => _isSidebarVisible = true);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 14,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            top: BorderSide(
+                                              color: colorScheme.outlineVariant,
+                                            ),
+                                            right: BorderSide(
+                                              color: colorScheme.outlineVariant,
+                                            ),
+                                            bottom: BorderSide(
+                                              color: colorScheme.outlineVariant,
+                                            ),
+                                          ),
+                                          borderRadius:
+                                              const BorderRadius.horizontal(
+                                            right: Radius.circular(12),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 20,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: workspaceBody),
                   ],
                 ),
               );
@@ -275,6 +344,7 @@ class _DesktopRail extends StatelessWidget {
     required this.isCompactMode,
     required this.autoHideSecondsRemaining,
     required this.onDestinationSelected,
+    required this.onToggleSidebar,
     required this.onToggleWindowMode,
     required this.onToggleAutoHide,
     required this.onToggleTheme,
@@ -286,6 +356,7 @@ class _DesktopRail extends StatelessWidget {
   final bool isCompactMode;
   final int? autoHideSecondsRemaining;
   final ValueChanged<int> onDestinationSelected;
+  final VoidCallback onToggleSidebar;
   final VoidCallback onToggleWindowMode;
   final VoidCallback onToggleAutoHide;
   final VoidCallback onToggleTheme;
@@ -307,48 +378,86 @@ class _DesktopRail extends StatelessWidget {
           : NavigationRailLabelType.all,
       leading: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: extended ? 16 : 8,
-          vertical: 16,
+          horizontal: extended ? 12 : 8,
+          vertical: extended ? 16 : 10,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.picture_as_pdf_rounded,
-                size: 20,
-                color: colorScheme.onPrimary,
-              ),
-            ),
-            if (extended) ...[
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: extended
+            ? SizedBox(
+                width: 196,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.picture_as_pdf_rounded,
+                        size: 20,
+                        color: colorScheme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'PDF Utils',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'Merge • Rotate • Split',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onToggleSidebar,
+                      tooltip: 'Sembunyikan Sidebar',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.menu_open_rounded, size: 20),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'PDF Utils',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.picture_as_pdf_rounded,
+                      size: 20,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
-                  Text(
-                    'Merge • Rotate • Split',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  const SizedBox(height: 4),
+                  IconButton(
+                    onPressed: onToggleSidebar,
+                    tooltip: 'Sembunyikan Sidebar',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.menu_open_rounded, size: 20),
                   ),
                 ],
               ),
-            ],
-          ],
-        ),
       ),
       destinations: [
         for (final item in _AppShellState._destinations)

@@ -57,6 +57,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Mode Terang'), findsOneWidget);
 
+      // Hide sidebar and restore it
+      await tester.tap(find.byTooltip('Sembunyikan Sidebar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byTooltip('Tampilkan Sidebar'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Tampilkan Sidebar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationRail), findsOneWidget);
+
       // Add 2 PDFs on Merge tab
       fake.dialogs.nextPickedFiles = <String>[
         r'C:\docs\satu.pdf',
