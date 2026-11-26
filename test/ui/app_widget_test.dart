@@ -157,6 +157,32 @@ void main() {
       await tester.tap(find.text('Batal').last);
       await tester.pumpAndSettle();
 
+      // Switch to PDF Viewer tab, open PDF, navigate page, zoom, and open search
+      await tester.tap(find.text('PDF Viewer').first);
+      await tester.pumpAndSettle();
+      fake.dialogs.nextPickedFile = r'C:\docs\satu.pdf';
+      await tester.tap(find.text('Buka File PDF').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('pdf_viewer_canvas')),
+        findsOneWidget,
+      );
+      expect(find.text('Halaman 1 dari 3 • 100%'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Halaman berikutnya'));
+      await tester.pumpAndSettle();
+      expect(find.text('Halaman 2 dari 3 • 100%'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Perbesar (Zoom In)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Halaman 2 dari 3 • 125%'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Cari teks dalam PDF'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cari teks di dalam dokumen...'), findsOneWidget);
+      await tester.tap(find.byTooltip('Tutup pencarian'));
+      await tester.pumpAndSettle();
+
       // Switch back to Merge tab -> state is preserved via IndexedStack
       await tester.tap(find.text('Gabung PDF').first);
       await tester.pumpAndSettle();
@@ -309,6 +335,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(fake.engine.lastEditOverlays?.length, 1);
       expect(find.text('Buka Folder'), findsWidgets);
+      expect(tester.takeException(), isNull);
+
+      // Populated PDF Viewer in phone size
+      await tester.tap(find.text('PDF Viewer').first);
+      await tester.pumpAndSettle();
+      fake.dialogs.nextPickedFile = r'C:\docs\laporan_panjang_sekali.pdf';
+      await tester.tap(find.text('Buka File PDF').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('pdf_viewer_canvas')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
 
       // Toggle back to Mode Desktop via AppBar icon

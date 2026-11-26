@@ -19,6 +19,7 @@ class AppShell extends StatefulWidget {
     required this.compressBuilder,
     required this.convertDocxBuilder,
     required this.editBuilder,
+    required this.viewerBuilder,
   });
 
   /// Whether dark theme is currently active.
@@ -47,6 +48,9 @@ class AppShell extends StatefulWidget {
 
   /// Builder for the interactive PDF editor tab.
   final WorkspaceTabBuilder editBuilder;
+
+  /// Builder for the PDF viewer tab.
+  final WorkspaceTabBuilder viewerBuilder;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -87,6 +91,11 @@ class _AppShellState extends State<AppShell> {
       icon: Icons.edit_outlined,
       selectedIcon: Icons.edit_rounded,
     ),
+    (
+      label: 'PDF Viewer',
+      icon: Icons.chrome_reader_mode_outlined,
+      selectedIcon: Icons.chrome_reader_mode_rounded,
+    ),
   ];
 
   @override
@@ -112,6 +121,7 @@ class _AppShellState extends State<AppShell> {
                 widget.compressBuilder(context, _selectedIndex == 3),
                 widget.convertDocxBuilder(context, _selectedIndex == 4),
                 widget.editBuilder(context, _selectedIndex == 5),
+                widget.viewerBuilder(context, _selectedIndex == 6),
               ],
             );
 

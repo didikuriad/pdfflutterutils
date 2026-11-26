@@ -19,6 +19,8 @@ import 'package:pdfutils/ui/features/rotate/view_models/rotate_view_model.dart';
 import 'package:pdfutils/ui/features/rotate/views/rotate_view.dart';
 import 'package:pdfutils/ui/features/split/view_models/split_view_model.dart';
 import 'package:pdfutils/ui/features/split/views/split_view.dart';
+import 'package:pdfutils/ui/features/viewer/view_models/pdf_viewer_view_model.dart';
+import 'package:pdfutils/ui/features/viewer/views/pdf_viewer_view.dart';
 
 /// Root desktop application widget for PDF Utils.
 class PdfUtilsApp extends StatefulWidget {
@@ -54,6 +56,7 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
   late final CompressPdfViewModel _compressViewModel;
   late final ConvertDocxViewModel _convertDocxViewModel;
   late final EditPdfViewModel _editPdfViewModel;
+  late final PdfViewerViewModel _viewerViewModel;
   DesktopWindowController? _ownedWindowController;
   late ThemeMode _themeMode;
 
@@ -71,6 +74,7 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
     _convertDocxViewModel = ConvertDocxViewModel(repository: widget.repository);
     unawaited(_convertDocxViewModel.checkAvailability());
     _editPdfViewModel = EditPdfViewModel(repository: widget.repository);
+    _viewerViewModel = PdfViewerViewModel(repository: widget.repository);
     if (widget.windowController == null) {
       _ownedWindowController = DesktopWindowController(
         platformService: NoopDesktopPlatformService(),
@@ -87,6 +91,7 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
     _compressViewModel.dispose();
     _convertDocxViewModel.dispose();
     _editPdfViewModel.dispose();
+    _viewerViewModel.dispose();
     _ownedWindowController?.dispose();
     super.dispose();
   }
@@ -126,6 +131,10 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
       ),
       editBuilder: (context, isActive) => EditPdfView(
         viewModel: _editPdfViewModel,
+        isActive: isActive,
+      ),
+      viewerBuilder: (context, isActive) => PdfViewerView(
+        viewModel: _viewerViewModel,
         isActive: isActive,
       ),
     );
