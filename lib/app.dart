@@ -7,6 +7,8 @@ import 'package:pdfutils/ui/core/controllers/desktop_window_controller.dart';
 import 'package:pdfutils/ui/core/theme/app_theme.dart';
 import 'package:pdfutils/ui/core/widgets/app_shell.dart';
 import 'package:pdfutils/ui/core/widgets/pdf_page_thumbnail.dart';
+import 'package:pdfutils/ui/features/compress/view_models/compress_pdf_view_model.dart';
+import 'package:pdfutils/ui/features/compress/views/compress_pdf_view.dart';
 import 'package:pdfutils/ui/features/convert_docx/view_models/convert_docx_view_model.dart';
 import 'package:pdfutils/ui/features/convert_docx/views/convert_docx_view.dart';
 import 'package:pdfutils/ui/features/edit/view_models/edit_pdf_view_model.dart';
@@ -49,6 +51,7 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
   late final MergeViewModel _mergeViewModel;
   late final RotateViewModel _rotateViewModel;
   late final SplitViewModel _splitViewModel;
+  late final CompressPdfViewModel _compressViewModel;
   late final ConvertDocxViewModel _convertDocxViewModel;
   late final EditPdfViewModel _editPdfViewModel;
   DesktopWindowController? _ownedWindowController;
@@ -64,6 +67,7 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
     _mergeViewModel = MergeViewModel(repository: widget.repository);
     _rotateViewModel = RotateViewModel(repository: widget.repository);
     _splitViewModel = SplitViewModel(repository: widget.repository);
+    _compressViewModel = CompressPdfViewModel(repository: widget.repository);
     _convertDocxViewModel = ConvertDocxViewModel(repository: widget.repository);
     unawaited(_convertDocxViewModel.checkAvailability());
     _editPdfViewModel = EditPdfViewModel(repository: widget.repository);
@@ -80,6 +84,7 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
     _mergeViewModel.dispose();
     _rotateViewModel.dispose();
     _splitViewModel.dispose();
+    _compressViewModel.dispose();
     _convertDocxViewModel.dispose();
     _editPdfViewModel.dispose();
     _ownedWindowController?.dispose();
@@ -109,6 +114,10 @@ class _PdfUtilsAppState extends State<PdfUtilsApp> {
       ),
       splitBuilder: (context, isActive) => SplitView(
         viewModel: _splitViewModel,
+        isActive: isActive,
+      ),
+      compressBuilder: (context, isActive) => CompressPdfView(
+        viewModel: _compressViewModel,
         isActive: isActive,
       ),
       convertDocxBuilder: (context, isActive) => ConvertDocxView(

@@ -8,6 +8,7 @@ import 'package:pdfutils/data/services/file_dialog_service.dart';
 import 'package:pdfutils/data/services/pdf_engine_service.dart';
 import 'package:pdfutils/data/services/pdf_to_docx_service.dart';
 import 'package:pdfutils/domain/models/app_window_mode.dart';
+import 'package:pdfutils/domain/models/compress_pdf_options.dart';
 import 'package:pdfutils/domain/models/operation_result.dart';
 import 'package:pdfutils/domain/models/pdf_edit_overlay.dart';
 import 'package:pdfutils/domain/models/pdf_file_info.dart';
@@ -137,6 +138,7 @@ class FakePdfEngineService implements PdfEngineService {
   Object? rotateError;
   Object? splitError;
   Object? editError;
+  Object? compressError;
 
   List<MergeSourceSpec>? lastMergeSources;
   String? lastMergeOutputPath;
@@ -153,6 +155,11 @@ class FakePdfEngineService implements PdfEngineService {
   String? lastEditInputPath;
   List<PdfEditOverlay>? lastEditOverlays;
   String? lastEditOutputPath;
+
+  String? lastCompressInputPath;
+  String? lastCompressOutputPath;
+  CompressQualityLevel? lastCompressQualityLevel;
+  CompressMode? lastCompressMode;
 
   @override
   Future<PdfFileInfo> inspectFile(String filePath) async {
@@ -265,6 +272,29 @@ class FakePdfEngineService implements PdfEngineService {
       totalPagesProcessed: touchedPages,
       message:
           'Berhasil menyimpan $outputPath (${overlays.length} anotasi pada $touchedPages halaman).',
+    );
+  }
+
+  @override
+  Future<PdfOperationResult> compressPdf({
+    required String inputPath,
+    required String outputPath,
+    required CompressQualityLevel qualityLevel,
+    required CompressMode mode,
+    PdfProgressCallback? onProgress,
+  }) async {
+    if (compressError != null) throw compressError!;
+    lastCompressInputPath = inputPath;
+    lastCompressOutputPath = outputPath;
+    lastCompressQualityLevel = qualityLevel;
+    lastCompressMode = mode;
+    final info = await inspectFile(inputPath);
+    onProgress?.call(info.pageCount, info.pageCount);
+    return PdfOperationResult(
+      outputPaths: <String>[outputPath],
+      totalPagesProcessed: info.pageCount,
+      message:
+          'Berhasil mengompresi ${info.fileName} menjadi $outputPath (${qualityLevel.label}).',
     );
   }
 }

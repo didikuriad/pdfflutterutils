@@ -293,11 +293,14 @@ class _DesktopHorizontalScrollView extends StatefulWidget {
 class _DesktopHorizontalScrollViewState
     extends State<_DesktopHorizontalScrollView> {
   late final ScrollController _controller;
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = ScrollController();
+    _controller = ScrollController()..addListener(_updateScrollIndicators);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScrollIndicators());
   }
 
   @override
@@ -306,40 +309,126 @@ class _DesktopHorizontalScrollViewState
     super.dispose();
   }
 
+  void _updateScrollIndicators() {
+    if (!mounted || !_controller.hasClients) return;
+    final max = _controller.position.maxScrollExtent;
+    final offset = _controller.offset;
+    final canLeft = offset > 4.0;
+    final canRight = offset < max - 4.0;
+    if (canLeft != _canScrollLeft || canRight != _canScrollRight) {
+      setState(() {
+        _canScrollLeft = canLeft;
+        _canScrollRight = canRight;
+      });
+    }
+  }
+
+  void _scrollBy(double delta) {
+    if (!_controller.hasClients) return;
+    final target = (_controller.offset + delta)
+        .clamp(0.0, _controller.position.maxScrollExtent);
+    _controller.animateTo(
+      target,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerSignal: (event) {
-        if (event is PointerScrollEvent && _controller.hasClients) {
-          final delta = event.scrollDelta.dy != 0
-              ? event.scrollDelta.dy
-              : event.scrollDelta.dx;
-          if (delta != 0) {
-            final target = (_controller.offset + delta)
-                .clamp(0.0, _controller.position.maxScrollExtent);
-            _controller.jumpTo(target);
-          }
-        }
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        _updateScrollIndicators();
+        return false;
       },
-      child: ScrollConfiguration(
-        behavior: ScrollConfiguration.of(context).copyWith(
-          dragDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-            PointerDeviceKind.trackpad,
-            PointerDeviceKind.stylus,
-          },
-        ),
-        child: Scrollbar(
-          controller: _controller,
-          thumbVisibility: false,
-          child: SingleChildScrollView(
-            controller: _controller,
-            scrollDirection: Axis.horizontal,
-            padding: widget.padding,
-            child: widget.child,
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Listener(
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent && _controller.hasClients) {
+                final delta = event.scrollDelta.dy != 0
+                    ? event.scrollDelta.dy
+                    : event.scrollDelta.dx;
+                if (delta != 0) {
+                  final target = (_controller.offset + delta)
+                      .clamp(0.0, _controller.position.maxScrollExtent);
+                  _controller.jumpTo(target);
+                }
+              }
+            },
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.trackpad,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Scrollbar(
+                    controller: _controller,
+                    thumbVisibility: false,
+                    child: SingleChildScrollView(
+                      controller: _controller,
+                      scrollDirection: Axis.horizontal,
+                      padding: widget.padding,
+                      child: widget.child,
+                    ),
+                  ),
+                  if (_canScrollLeft)
+                    Positioned(
+                      left: 2,
+                      child: Material(
+                        color: colorScheme.surfaceContainerHigh
+                            .withValues(alpha: 0.95),
+                        shape: const CircleBorder(),
+                        elevation: 2,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _scrollBy(-180),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.chevron_left_rounded,
+                              size: 18,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_canScrollRight)
+                    Positioned(
+                      right: 2,
+                      child: Material(
+                        color: colorScheme.surfaceContainerHigh
+                            .withValues(alpha: 0.95),
+                        shape: const CircleBorder(),
+                        elevation: 2,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _scrollBy(180),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.chevron_right_rounded,
+                              size: 18,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

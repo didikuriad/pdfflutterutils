@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:pdfutils/data/services/pdf_engine_service.dart';
+import 'package:pdfutils/domain/models/compress_pdf_options.dart';
 import 'package:pdfutils/domain/models/operation_result.dart';
 import 'package:pdfutils/domain/models/pdf_edit_overlay.dart';
 import 'package:pdfutils/domain/models/pdf_rotation.dart';
@@ -460,4 +461,42 @@ void main() {
       }
     },
   );
+
+  test('compressPdf in visual mode compresses pages into a readable PDF', () async {
+    final input = await writeSamplePdf('to_compress.pdf', 2);
+    final output = p.join(tempDir.path, 'compressed.pdf');
+
+    final result = await service.compressPdf(
+      inputPath: input,
+      outputPath: output,
+      qualityLevel: CompressQualityLevel.medium,
+      mode: CompressMode.visual,
+    );
+
+    expect(result.outputPaths, <String>[output]);
+    expect(result.totalPagesProcessed, 2);
+    expect(await File(output).exists(), isTrue);
+
+    final info = await service.inspectFile(output);
+    expect(info.pageCount, 2);
+  });
+
+  test('compressPdf in lossless mode optimizes document streams', () async {
+    final input = await writeSamplePdf('lossless_input.pdf', 2);
+    final output = p.join(tempDir.path, 'lossless_output.pdf');
+
+    final result = await service.compressPdf(
+      inputPath: input,
+      outputPath: output,
+      qualityLevel: CompressQualityLevel.low,
+      mode: CompressMode.lossless,
+    );
+
+    expect(result.outputPaths, <String>[output]);
+    expect(result.totalPagesProcessed, 2);
+    expect(await File(output).exists(), isTrue);
+
+    final info = await service.inspectFile(output);
+    expect(info.pageCount, 2);
+  });
 }

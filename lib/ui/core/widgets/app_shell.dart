@@ -16,6 +16,7 @@ class AppShell extends StatefulWidget {
     required this.mergeBuilder,
     required this.rotateBuilder,
     required this.splitBuilder,
+    required this.compressBuilder,
     required this.convertDocxBuilder,
     required this.editBuilder,
   });
@@ -37,6 +38,9 @@ class AppShell extends StatefulWidget {
 
   /// Builder for the Split tab.
   final WorkspaceTabBuilder splitBuilder;
+
+  /// Builder for the PDF compression tab.
+  final WorkspaceTabBuilder compressBuilder;
 
   /// Builder for the PDF to DOCX conversion tab.
   final WorkspaceTabBuilder convertDocxBuilder;
@@ -67,6 +71,11 @@ class _AppShellState extends State<AppShell> {
       label: 'Pisah PDF',
       icon: Icons.call_split_outlined,
       selectedIcon: Icons.call_split_rounded,
+    ),
+    (
+      label: 'Kompres PDF',
+      icon: Icons.compress_outlined,
+      selectedIcon: Icons.compress_rounded,
     ),
     (
       label: 'PDF ke DOCX',
@@ -100,8 +109,9 @@ class _AppShellState extends State<AppShell> {
                 widget.mergeBuilder(context, _selectedIndex == 0),
                 widget.rotateBuilder(context, _selectedIndex == 1),
                 widget.splitBuilder(context, _selectedIndex == 2),
-                widget.convertDocxBuilder(context, _selectedIndex == 3),
-                widget.editBuilder(context, _selectedIndex == 4),
+                widget.compressBuilder(context, _selectedIndex == 3),
+                widget.convertDocxBuilder(context, _selectedIndex == 4),
+                widget.editBuilder(context, _selectedIndex == 5),
               ],
             );
 
@@ -343,96 +353,98 @@ class _DesktopRail extends StatelessWidget {
           alignment: Alignment.bottomCenter,
           child: Padding(
             padding: const EdgeInsets.only(bottom: 16, left: 12, right: 12),
-            child: extended
-                ? SizedBox(
-                    width: 196,
-                    child: Column(
+            child: SingleChildScrollView(
+              child: extended
+                  ? SizedBox(
+                      width: 196,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: onToggleWindowMode,
+                            icon: Icon(
+                              isCompactMode
+                                  ? Icons.desktop_windows_outlined
+                                  : Icons.smartphone_rounded,
+                              size: 18,
+                            ),
+                            label: Text(
+                              isCompactMode ? 'Mode Desktop' : 'Mode Kecil (HP)',
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (isCountingDown)
+                            FilledButton.tonalIcon(
+                              onPressed: onToggleAutoHide,
+                              icon:
+                                  const Icon(Icons.timer_off_outlined, size: 18),
+                              label: Text('Batal (${autoHideSecondsRemaining}d)'),
+                            )
+                          else
+                            OutlinedButton.icon(
+                              onPressed: onToggleAutoHide,
+                              icon: const Icon(
+                                Icons.visibility_off_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Auto Hide'),
+                            ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: onToggleTheme,
+                            icon: Icon(
+                              isDarkMode
+                                  ? Icons.light_mode_outlined
+                                  : Icons.dark_mode_outlined,
+                              size: 18,
+                            ),
+                            label:
+                                Text(isDarkMode ? 'Mode Terang' : 'Mode Gelap'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        OutlinedButton.icon(
+                        IconButton(
                           onPressed: onToggleWindowMode,
+                          tooltip: isCompactMode
+                              ? 'Beralih ke Mode Desktop'
+                              : 'Beralih ke Mode Kecil (HP)',
                           icon: Icon(
                             isCompactMode
                                 ? Icons.desktop_windows_outlined
                                 : Icons.smartphone_rounded,
-                            size: 18,
-                          ),
-                          label: Text(
-                            isCompactMode ? 'Mode Desktop' : 'Mode Kecil (HP)',
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        if (isCountingDown)
-                          FilledButton.tonalIcon(
-                            onPressed: onToggleAutoHide,
-                            icon:
-                                const Icon(Icons.timer_off_outlined, size: 18),
-                            label: Text('Batal (${autoHideSecondsRemaining}d)'),
-                          )
-                        else
-                          OutlinedButton.icon(
-                            onPressed: onToggleAutoHide,
-                            icon: const Icon(
-                              Icons.visibility_off_outlined,
-                              size: 18,
-                            ),
-                            label: const Text('Auto Hide'),
+                        const SizedBox(height: 4),
+                        IconButton(
+                          onPressed: onToggleAutoHide,
+                          tooltip: isCountingDown
+                              ? 'Batalkan auto-hide (${autoHideSecondsRemaining}d)'
+                              : 'Mulai auto-hide 5 detik ke tray',
+                          icon: Icon(
+                            isCountingDown
+                                ? Icons.timer_off_outlined
+                                : Icons.visibility_off_outlined,
+                            color: isCountingDown ? colorScheme.primary : null,
                           ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
+                        ),
+                        const SizedBox(height: 4),
+                        IconButton(
                           onPressed: onToggleTheme,
+                          tooltip: isDarkMode ? 'Mode Terang' : 'Mode Gelap',
                           icon: Icon(
                             isDarkMode
                                 ? Icons.light_mode_outlined
                                 : Icons.dark_mode_outlined,
-                            size: 18,
                           ),
-                          label:
-                              Text(isDarkMode ? 'Mode Terang' : 'Mode Gelap'),
                         ),
                       ],
                     ),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: onToggleWindowMode,
-                        tooltip: isCompactMode
-                            ? 'Beralih ke Mode Desktop'
-                            : 'Beralih ke Mode Kecil (HP)',
-                        icon: Icon(
-                          isCompactMode
-                              ? Icons.desktop_windows_outlined
-                              : Icons.smartphone_rounded,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      IconButton(
-                        onPressed: onToggleAutoHide,
-                        tooltip: isCountingDown
-                            ? 'Batalkan auto-hide (${autoHideSecondsRemaining}d)'
-                            : 'Mulai auto-hide 5 detik ke tray',
-                        icon: Icon(
-                          isCountingDown
-                              ? Icons.timer_off_outlined
-                              : Icons.visibility_off_outlined,
-                          color: isCountingDown ? colorScheme.primary : null,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      IconButton(
-                        onPressed: onToggleTheme,
-                        tooltip: isDarkMode ? 'Mode Terang' : 'Mode Gelap',
-                        icon: Icon(
-                          isDarkMode
-                              ? Icons.light_mode_outlined
-                              : Icons.dark_mode_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
+            ),
           ),
         ),
       ),

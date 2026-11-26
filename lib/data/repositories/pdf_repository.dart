@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import '../../domain/models/compress_pdf_options.dart';
 import '../../domain/models/operation_result.dart';
 import '../../domain/models/pdf_edit_overlay.dart';
 import '../../domain/models/pdf_file_info.dart';
@@ -110,6 +111,22 @@ class PdfRepository {
         inputPath: inputPath,
         overlays: overlays,
         outputPath: outputPath,
+      );
+
+  /// Compresses [inputPath] to [outputPath] using [qualityLevel] and [mode].
+  Future<PdfOperationResult> compressPdf({
+    required String inputPath,
+    required String outputPath,
+    required CompressQualityLevel qualityLevel,
+    required CompressMode mode,
+    PdfProgressCallback? onProgress,
+  }) =>
+      _engineService.compressPdf(
+        inputPath: inputPath,
+        outputPath: outputPath,
+        qualityLevel: qualityLevel,
+        mode: mode,
+        onProgress: onProgress,
       );
 
   /// Converts one or more PDF [files] into `.docx` documents.

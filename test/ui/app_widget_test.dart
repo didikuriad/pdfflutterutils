@@ -106,6 +106,25 @@ void main() {
       expect(find.text('satu_hal_001.pdf'), findsOneWidget);
       expect(find.text('3 file'), findsOneWidget);
 
+      // Switch to Kompres PDF tab, pick PDF, select options and compress
+      await tester.tap(find.text('Kompres PDF').first);
+      await tester.pumpAndSettle();
+      fake.dialogs.nextPickedFile = r'C:\docs\satu.pdf';
+      await tester.tap(find.text('Buka File PDF').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Pengaturan Kompresi'), findsOneWidget);
+      expect(find.text('Sedang (Rekomendasi)'), findsWidgets);
+
+      await tester.tap(find.text('Tinggi (Ukuran Minimum)').last);
+      await tester.pumpAndSettle();
+
+      fake.dialogs.nextSavePath = r'C:\docs\satu_compressed.pdf';
+      await tester.tap(find.text('Kompres & Simpan PDF'));
+      await tester.pumpAndSettle();
+      expect(fake.engine.lastCompressInputPath, r'C:\docs\satu.pdf');
+      expect(fake.engine.lastCompressOutputPath, r'C:\docs\satu_compressed.pdf');
+      expect(find.text('Buka Folder'), findsWidgets);
+
       // Switch to PDF ke DOCX tab, add PDF, and convert
       await tester.tap(find.text('PDF ke DOCX').first);
       await tester.pumpAndSettle();
@@ -222,6 +241,21 @@ void main() {
       await tester.tap(find.text('Per Hal'));
       await tester.pumpAndSettle();
       expect(find.text('laporan_panjang_sekali_hal_001.pdf'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Populated Kompres PDF in phone size
+      await tester.tap(find.text('Kompres PDF').first);
+      await tester.pumpAndSettle();
+      fake.dialogs.nextPickedFile = r'C:\docs\laporan_panjang_sekali.pdf';
+      await tester.tap(find.text('Buka File PDF').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Pengaturan Kompresi'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      fake.dialogs.nextSavePath = r'C:\docs\laporan_compressed.pdf';
+      await tester.tap(find.text('Kompres & Simpan PDF'));
+      await tester.pumpAndSettle();
+      expect(fake.engine.lastCompressInputPath, r'C:\docs\laporan_panjang_sekali.pdf');
+      expect(find.text('Buka Folder'), findsWidgets);
       expect(tester.takeException(), isNull);
 
       // Populated PDF ke DOCX in phone size

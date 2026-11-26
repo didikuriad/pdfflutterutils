@@ -1,15 +1,19 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 
+import '../../domain/models/compress_pdf_options.dart';
 import '../../domain/models/operation_result.dart';
 import '../../domain/models/pdf_edit_overlay.dart';
 import '../../domain/models/pdf_file_info.dart';
 import '../../domain/models/pdf_rotation.dart';
 import '../../domain/models/split_mode.dart';
 import '../../domain/utils/file_format_utils.dart';
+import 'pdfium_compressor.dart';
 import 'pdfium_overlay_writer.dart';
 
 /// Specification for one input document and its selected 1-based pages during merge.
@@ -73,6 +77,15 @@ abstract class PdfEngineService {
     required String inputPath,
     required List<PdfEditOverlay> overlays,
     required String outputPath,
+  });
+
+  /// Compresses [inputPath] using [qualityLevel] and [mode] and writes to [outputPath].
+  Future<PdfOperationResult> compressPdf({
+    required String inputPath,
+    required String outputPath,
+    required CompressQualityLevel qualityLevel,
+    required CompressMode mode,
+    PdfProgressCallback? onProgress,
   });
 }
 
@@ -439,6 +452,130 @@ class PdfrxPdfEngineService implements PdfEngineService {
       totalPagesProcessed: touchedPages,
       message:
           'Berhasil menyimpan ${p.basename(normalizedOutput)} (${overlays.length} anotasi pada $touchedPages halaman).',
+    );
+  }
+
+  @override
+  Future<PdfOperationResult> compressPdf({
+    required String inputPath,
+    required String outputPath,
+    required CompressQualityLevel qualityLevel,
+    required CompressMode mode,
+    PdfProgressCallback? onProgress,
+  }) async {
+    final normalizedInput = p.normalize(inputPath);
+    final normalizedOutput = ensurePdfExtension(p.normalize(outputPath));
+    final inputFile = File(normalizedInput);
+    if (!await inputFile.exists()) {
+      throw PdfOperationException(
+        'File sumber tidak ditemukan: ${p.basename(normalizedInput)}',
+      );
+    }
+
+    final originalSizeBytes = await inputFile.length();
+    PdfDocument? sourceDoc;
+    PdfDocument? outputDoc;
+    late final Uint8List finalBytes;
+    var totalPages = 0;
+
+    try {
+      sourceDoc = await PdfDocument.openFile(normalizedInput);
+      totalPages = sourceDoc.pages.length;
+      if (totalPages == 0) {
+        throw const PdfOperationException('Dokumen PDF tidak memiliki halaman.');
+      }
+
+      if (mode == CompressMode.lossless) {
+        outputDoc = await PdfDocument.createNew(
+          sourceName:
+              'compress_lossless_${DateTime.now().microsecondsSinceEpoch}.pdf',
+        );
+        outputDoc.pages = sourceDoc.pages;
+        final candidateBytes = await outputDoc.encodePdf(
+          removeSecurity: true,
+          incremental: false,
+        );
+        if (candidateBytes.length < originalSizeBytes) {
+          finalBytes = candidateBytes;
+        } else {
+          finalBytes = await inputFile.readAsBytes();
+        }
+        onProgress?.call(totalPages, totalPages);
+      } else {
+        final scale = qualityLevel.targetDpi / 72.0;
+        final compressedPages = <CompressedPageSpec>[];
+
+        for (var i = 0; i < totalPages; i++) {
+          final page = sourceDoc.pages[i];
+          final targetWidth = math.max(1, (page.width * scale).round());
+          final targetHeight = math.max(1, (page.height * scale).round());
+
+          final pdfImage = await page.render(
+            fullWidth: targetWidth.toDouble(),
+            fullHeight: targetHeight.toDouble(),
+          );
+
+          if (pdfImage == null) {
+            throw PdfOperationException(
+              'Gagal merender halaman ${i + 1} untuk kompresi.',
+            );
+          }
+
+          final image = img.Image.fromBytes(
+            width: pdfImage.width,
+            height: pdfImage.height,
+            bytes: pdfImage.pixels.buffer,
+            order: img.ChannelOrder.bgra,
+            numChannels: 4,
+          );
+          final jpegBytes = Uint8List.fromList(
+            img.encodeJpg(image, quality: qualityLevel.jpegQuality),
+          );
+          pdfImage.dispose();
+
+          compressedPages.add(
+            CompressedPageSpec(
+              widthPt: page.width,
+              heightPt: page.height,
+              jpegBytes: jpegBytes,
+            ),
+          );
+
+          onProgress?.call(i + 1, totalPages);
+        }
+
+        finalBytes = await assembleCompressedPdf(compressedPages);
+      }
+    } catch (error) {
+      throw _mapError(
+        error,
+        fallback: 'Gagal mengompresi PDF "${p.basename(normalizedInput)}".',
+      );
+    } finally {
+      await outputDoc?.dispose();
+      await sourceDoc?.dispose();
+    }
+
+    await _writePdfBytes(normalizedOutput, finalBytes);
+    final finalSize = finalBytes.length;
+    final saved = originalSizeBytes - finalSize;
+    final pct = originalSizeBytes > 0
+        ? (saved / originalSizeBytes * 100.0).clamp(-999.0, 99.9)
+        : 0.0;
+
+    final String message;
+    if (saved > 0) {
+      message =
+          'Berhasil mengompresi ${p.basename(normalizedOutput)} dari ${formatFileSize(originalSizeBytes)} menjadi ${formatFileSize(finalSize)} (hemat ${pct.toStringAsFixed(1)}%).';
+    } else {
+      message =
+          'File ${p.basename(normalizedOutput)} tersimpan (${formatFileSize(finalSize)}). File sudah optimal.';
+    }
+
+    return PdfOperationResult(
+      outputPaths: <String>[normalizedOutput],
+      totalPagesProcessed: totalPages,
+      message: message,
     );
   }
 
